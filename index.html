@@ -1,0 +1,30 @@
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  // 1. Initialize Supabase
+  const supabase = supabase.createClient('https://mqngtlppbbudjxtlzdtj.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xbmd0bHBwYmJ1ZGp4dGx6ZHRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNDc4NzUsImV4cCI6MjA5MTkyMzg3NX0.eQLwJLl3rmL1hh8gbz2F2k0t1c5IM-mDPeF3MjHhISM');
+
+  // 2. Join the "Room"
+  async function joinRoom() {
+    const roomId = document.getElementById('roomInput').value;
+    
+    // Listen for new messages in real-time
+    supabase
+      .channel('public:messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${roomId}` }, 
+      payload => {
+        displayMessage(payload.new);
+      })
+      .subscribe();
+  }
+
+  // 3. Send a Message
+  async function sendMessage() {
+    const content = document.getElementById('msgInput').value;
+    const roomId = document.getElementById('roomInput').value;
+
+    await supabase.from('messages').insert([
+      { content: content, room_id: roomId, sender: 'PC' } // Change 'PC' to 'Phone' on your devices
+    ]);
+  }
+</script>
