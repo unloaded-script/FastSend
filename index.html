@@ -32,24 +32,6 @@
 </head>
 <body>
 
-<div id="app">
-    <div id="setup">
-        <h2>FastSend</h2>
-        <p>Enter a Room ID to sync devices</p>
-        <input type="text" id="roomInput" placeholder="e.g. 9921">
-        <input type="text" id="nameInput" placeholder="Device Name (e.g. PC)">
-        <button onclick="joinRoom()">Connect</button>
-    </div>
-
-    <div id="chat-window">
-        <div id="messages"></div>
-        <div class="input-area">
-            <input type="text" id="msgInput" placeholder="Type a message..." onkeypress="handleKey(event)">
-            <button onclick="sendMessage()">Send</button>
-        </div>
-    </div>
-</div>
-
 <script>
     // --- CONFIGURATION ---
     const SB_URL = 'https://mqngtlppbbudjxtlzdtj.supabase.co';
@@ -131,6 +113,24 @@
         if (e.key === 'Enter') sendMessage();
     }
 </script>
+
+<div id="app">
+    <div id="setup">
+        <h2>FastSend</h2>
+        <p>Enter a Room ID to sync devices</p>
+        <input type="text" id="roomInput" placeholder="e.g. 9921">
+        <input type="text" id="nameInput" placeholder="Device Name (e.g. PC)">
+        <button onclick="joinRoom()">Connect</button>
+    </div>
+
+    <div id="chat-window">
+        <div id="messages"></div>
+        <div class="input-area">
+            <input type="text" id="msgInput" placeholder="Type a message..." onkeypress="handleKey(event)">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
