@@ -67,7 +67,7 @@
 
             // Fetch history
             const { data } = await supabase
-                .from('messages') 
+                .from('group_id') // Updated name
                 .select('*')
                 .eq('room_id', currentRoom)
                 .order('created_at', { ascending: true });
@@ -78,7 +78,7 @@
             supabase
                 .channel('chat-room')
                 .on('postgres_changes', 
-                    { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${currentRoom}` }, 
+                    { event: 'INSERT', schema: 'public', table: 'group_id', filter: `room_id=eq.${currentRoom}` }, 
                     payload => displayMessage(payload.new)
                 )
                 .subscribe();
@@ -91,8 +91,12 @@
 
             input.value = ''; // Clear input
 
-            const { error } = await supabase.from('messages').insert([
-                { content: content, room_id: currentRoom, sender: deviceName }
+            const { error } = await supabase.from('group_id').insert([ // Updated name
+                { 
+                    content: content, 
+                    room_id: currentRoom, 
+                     sender: deviceName 
+                }
             ]);
             
             if (error) console.error("Send Error:", error);
