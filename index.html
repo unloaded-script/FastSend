@@ -7,118 +7,28 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
     
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         #app { width: 100%; max-width: 400px; background: white; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 12px; overflow: hidden; }
-        
-        /* Setup Screen */
-        #setup { padding: 20px; display: flex; flex-direction: column; gap: 10px; justify-content: center; height: 100%; text-align: center; }
-        
-        /* Chat Screen */
+        #setup { padding: 40px 20px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; text-align: center; }
         #chat-window { display: none; flex-direction: column; height: 100%; }
         #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #e5ddd5; }
-        
-        /* Bubbles */
-        .msg { padding: 8px 12px; border-radius: 15px; max-width: 80%; font-size: 14px; position: relative; }
+        .msg { padding: 8px 12px; border-radius: 15px; max-width: 80%; font-size: 14px; position: relative; word-wrap: break-word; }
         .received { background: white; align-self: flex-start; border-bottom-left-radius: 2px; }
         .sent { background: #dcf8c6; align-self: flex-end; border-bottom-right-radius: 2px; }
         .sender-tag { font-size: 10px; font-weight: bold; color: #888; margin-bottom: 2px; display: block; }
-
-        /* Input Area */
         .input-area { padding: 10px; display: flex; gap: 8px; background: #f0f0f0; }
-        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
-        button { padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
+        input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 20px; outline: none; font-size: 16px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
         button:hover { background: #0056b3; }
     </style>
 </head>
 <body>
 
-<script>
-    // --- CONFIGURATION ---
-    const SB_URL = 'https://mqngtlppbbudjxtlzdtj.supabase.co';
-    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xbmd0bHBwYmJ1ZGp4dGx6ZHRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNDc4NzUsImV4cCI6MjA5MTkyMzg3NX0.eQLwJLl3rmL1hh8gbz2F2k0t1c5IM-mDPeF3MjHhISM';
-    
-    // Initialize Supabase
-    const supabase = window.supabase.createClient(SB_URL, SB_KEY);
-    
-    let currentRoom = '';
-    let deviceName = '';
-
-    async function joinRoom() {
-        currentRoom = document.getElementById('roomInput').value;
-        deviceName = document.getElementById('nameInput').value || 'Device';
-
-        if (!currentRoom) return alert("Please enter a Room ID");
-
-        // UI Swap
-        document.getElementById('setup').style.display = 'none';
-        document.getElementById('chat-window').style.display = 'flex';
-
-        // 1. Fetch existing messages
-        const { data, error } = await supabase
-            .from('messages')
-            .select('*')
-            .eq('room_id', currentRoom)
-            .order('created_at', { ascending: true });
-
-        if (data) data.forEach(msg => displayMessage(msg));
-
-        // 2. Subscribe to new messages (Realtime)
-        supabase
-            .channel('any')
-            .on('postgres_changes', 
-                { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${currentRoom}` }, 
-                payload => {
-                    displayMessage(payload.new);
-                }
-            )
-            .subscribe();
-    }
-
-    async function sendMessage() {
-        const input = document.getElementById('msgInput');
-        const content = input.value;
-        if (!content) return;
-
-        input.value = ''; // Clear input immediately
-
-        const { error } = await supabase.from('messages').insert([
-            { 
-                content: content, 
-                room_id: currentRoom, 
-                sender: deviceName 
-            }
-        ]);
-        
-        if (error) console.error("Error sending:", error);
-    }
-
-    function displayMessage(msg) {
-        const container = document.getElementById('messages');
-        const div = document.createElement('div');
-        
-        // Check if I sent it or someone else did
-        const isMe = msg.sender === deviceName;
-        div.className = `msg ${isMe ? 'sent' : 'received'}`;
-        
-        div.innerHTML = `
-            <span class="sender-tag">${msg.sender}</span>
-            ${msg.content}
-        `;
-        
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-    }
-
-    function handleKey(e) {
-        if (e.key === 'Enter') sendMessage();
-    }
-</script>
-
 <div id="app">
     <div id="setup">
-        <h2>FastSend</h2>
-        <p>Enter a Room ID to sync devices</p>
-        <input type="text" id="roomInput" placeholder="e.g. 9921">
+        <h2 style="margin:0; color:#007bff;">FastSend</h2>
+        <p style="color:#666;">Enter a Room ID to sync devices</p>
+        <input type="text" id="roomInput" placeholder="Room ID (e.g. 1234)" autofocus>
         <input type="text" id="nameInput" placeholder="Device Name (e.g. PC)">
         <button onclick="joinRoom()">Connect</button>
     </div>
@@ -131,6 +41,84 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- 1. CONFIGURATION ---
+        const SB_URL = 'https://mqngtlppbbudjxtlzdtj.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xbmd0bHBwYmJ1ZGp4dGx6ZHRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNDc4NzUsImV4cCI6MjA5MTkyMzg3NX0.eQLwJLl3rmL1hh8gbz2F2k0t1c5IM-mDPeF3MjHhISM';
+        
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+        
+        let currentRoom = '';
+        let deviceName = '';
+
+        // --- 2. GLOBAL FUNCTIONS ---
+        window.joinRoom = async function() {
+            currentRoom = document.getElementById('roomInput').value;
+            deviceName = document.getElementById('nameInput').value || 'Device';
+
+            if (!currentRoom) return alert("Please enter a Room ID");
+
+            // UI Swap
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('chat-window').style.display = 'flex';
+
+            // Fetch history
+            const { data } = await supabase
+                .from('messages') 
+                .select('*')
+                .eq('room_id', currentRoom)
+                .order('created_at', { ascending: true });
+
+            if (data) data.forEach(msg => displayMessage(msg));
+
+            // Realtime setup
+            supabase
+                .channel('chat-room')
+                .on('postgres_changes', 
+                    { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${currentRoom}` }, 
+                    payload => displayMessage(payload.new)
+                )
+                .subscribe();
+        };
+
+        window.sendMessage = async function() {
+            const input = document.getElementById('msgInput');
+            const content = input.value.trim();
+            if (!content) return;
+
+            input.value = ''; // Clear input
+
+            const { error } = await supabase.from('messages').insert([
+                { content: content, room_id: currentRoom, sender: deviceName }
+            ]);
+            
+            if (error) console.error("Send Error:", error);
+        };
+
+        window.handleKey = function(e) {
+            if (e.key === 'Enter') window.sendMessage();
+        };
+
+        function displayMessage(msg) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            
+            const isMe = msg.sender === deviceName;
+            div.className = `msg ${isMe ? 'sent' : 'received'}`;
+            
+            div.innerHTML = `
+                <span class="sender-tag">${msg.sender}</span>
+                ${msg.content}
+            `;
+            
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+    });
+</script>
 
 </body>
 </html>
