@@ -36,6 +36,9 @@
     <div id="chat-window">
         <div id="messages"></div>
         <div class="input-area">
+            <input type="file" id="fileInput" style="display:none;" onchange="uploadFile(this)">
+            <button onclick="document.getElementById('fileInput').click()">📎</button>
+    
             <input type="text" id="msgInput" placeholder="Type a message..." onkeypress="handleKey(event)">
             <button onclick="sendMessage()">Send</button>
         </div>
@@ -105,6 +108,34 @@
             if (error) console.error("Send Error:", error);
         };
 
+        window.uploadFile = async function(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `${currentRoom}/${fileName}`;
+
+            const { data, error } = await supabase.storage
+                .from('files')
+                .upload(filePath, file);
+
+            if (error) return alert("Upload failed: " + error.message);
+
+            const { data: urlData } = supabase.storage
+                .from('files')
+                .getPublicUrl(filePath);
+
+            const publicUrl = urlData.publicUrl;
+            await supabase.from('group_id').insert([
+                { 
+                    content: `FILE: ${file.name} | ${publicUrl}`, 
+                    room_id: currentRoom, 
+                    sender: deviceName 
+                }
+            ]);
+        };
+
         window.handleKey = function(e) {
             if (e.key === 'Enter') window.sendMessage();
         };
@@ -112,15 +143,19 @@
         function displayMessage(msg) {
             const container = document.getElementById('messages');
             const div = document.createElement('div');
-            
             const isMe = msg.sender === deviceName;
             div.className = `msg ${isMe ? 'sent' : 'received'}`;
-            
-            div.innerHTML = `
-                <span class="sender-tag">${msg.sender}</span>
-                ${msg.content}
-            `;
-            
+
+            let content = msg.content;
+
+            if (content.startsWith("FILE:")) {
+                const parts = content.split('|');
+                const fileName = parts[0].replace("FILE: ", "");
+                const url = parts[1].trim();
+                content = `<a href="${url}" target="_blank" style="color:inherit;">📁 ${fileName}</a>`;
+            }
+
+            div.innerHTML = `<span class="sender-tag">${msg.sender}</span>${content}`;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
