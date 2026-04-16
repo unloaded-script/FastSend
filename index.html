@@ -61,6 +61,9 @@
 
             if (!currentRoom) return alert("Please enter a Room ID");
 
+            localStorage.setItem('lastRoom', currentRoom);
+            localStorage.setItem('lastName', deviceName);
+
             // UI Swap
             document.getElementById('setup').style.display = 'none';
             document.getElementById('chat-window').style.display = 'flex';
@@ -120,6 +123,16 @@
             
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
+        }
+
+        const savedRoom = localStorage.getItem('lastRoom');
+        const savedName = localStorage.getItem('lastName');
+
+        if (savedRoom) {
+            document.getElementById('roomInput').value = savedRoom;
+        }
+        if (savedName) {
+            document.getElementById('nameInput').value = savedName;
         }
     });
 </script>
