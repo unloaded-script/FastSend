@@ -36,8 +36,18 @@
     <div id="setup" style="display:none;">
         <h2 style="margin:0; color:#007bff;">FastSend</h2>
         <p>Welcome, <span id="displayUser"></span>!</p>
-        <input type="text" id="roomInput" placeholder="Enter Room ID">
-        <button onclick="joinRoom()">Connect to Chat</button>
+    
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <input type="text" id="roomInput" placeholder="Enter Room ID">
+            <button onclick="joinRoom()">Connect to Chat</button>
+        </div>
+
+        <div style="margin-top: 20px; text-align: left;">
+            <small style="color: #888; font-weight: bold;">RECENT ROOMS</small>
+            <div id="roomList" style="margin-top:10px; max-height: 150px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; background: #fafafa;">
+                <div style="padding: 15px; color: #aaa; text-align: center; font-size: 13px;">No recent rooms</div>
+            </div>
+        </div>
     </div>
 
     <div id="chat-window">
@@ -103,16 +113,47 @@
             }
         };
 
+        function updateRoomList() {
+            const listContainer = document.getElementById('roomList');
+            const rooms = JSON.parse(localStorage.getItem('recentRooms') || '[]');
+    
+            if (rooms.length === 0) return;
+
+            listContainer.innerHTML = ''; // Clear "No recent rooms"
+    
+            rooms.forEach(room => {
+                 const item = document.createElement('div');
+                item.style = "padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: white;";
+                item.innerHTML = `
+                    <span style="font-weight: 500;">Room: ${room}</span>
+                    <span style="color: #007bff; font-size: 12px;">Join →</span>
+                `;
+        // When clicked, it fills the input and joins
+                item.onclick = () => {
+                    document.getElementById('roomInput').value = room;
+                    window.joinRoom();
+                };
+                listContainer.appendChild(item);
+            });
+        }
+
         function showSetup() {
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('setup').style.display = 'flex';
             document.getElementById('displayUser').innerText = deviceName;
+            updateRoomList();
         }
 
         window.joinRoom = async function() {
-            currentRoom = document.getElementById('roomInput').value;
+            currentRoom = document.getElementById('roomInput').value.trim();
             if (!currentRoom) return alert("Enter a Room ID");
 
+            let rooms = JSON.parse(localStorage.getItem('recentRooms') || '[]');
+            if (!rooms.includes(currentRoom)) {
+                rooms.unshift(currentRoom);
+                rooms = rooms.slice(0, 5);
+                localStorage.setItem('recentRooms', JSON.stringify(rooms));
+            }
             document.getElementById('setup').style.display = 'none';
             document.getElementById('chat-window').style.display = 'flex';
 
