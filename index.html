@@ -232,8 +232,9 @@
                 content = `<a href="${parts[1].trim()}" target="_blank" style="color:inherit;">📁 ${parts[0].replace("FILE: ", "")}</a>`;
             }
 
+            const safeName = msg.sender.replace(/\s+/g, '_'); 
             div.innerHTML = `
-                <div style="width: 30px; height: 30px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden;">
+            <div style="width: 30px; height: 30px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden;">
                     <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" class="msg-avatar-${msg.sender}" style="width:100%; height:100%; object-fit:cover; background: #ccc;">
                 </div>
                 <div class="msg ${isMe ? 'sent' : 'received'}" style="margin: 0;">
@@ -251,7 +252,8 @@
         async function fetchAvatar(username) {
             const { data } = await supabase.from('users').select('avatar_url').eq('username', username).single();
             if (data && data.avatar_url) {
-                const icons = document.querySelectorAll(`.msg-avatar-${username}`);
+                const safeName = username.replace(/\s+/g, '_'); // Fix spaces here too
+                const icons = document.querySelectorAll(`.msg-avatar-${safeName}`);
                 icons.forEach(img => img.src = data.avatar_url);
             }
         }
