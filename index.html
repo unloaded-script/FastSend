@@ -136,10 +136,21 @@
             });
         }
 
-        function showSetup() {
+        async function showSetup() {
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('setup').style.display = 'flex';
             document.getElementById('displayUser').innerText = deviceName;
+
+            const { data } = await supabase
+                .from('users')
+                .select('avatar_url')
+                .eq('username', deviceName)
+                .single();
+
+            if (data && data.avatar_url) {
+                document.getElementById('userAvatar').src = data.avatar_url;
+            }
+    
             updateRoomList();
         }
 
@@ -162,7 +173,7 @@
 
             if (dbError) return alert("Error saving to database");
 
-            document.getElementById('userAvatar').src = photoUrl;
+            document.getElementById('userAvatar').src = photoUrl + '?t=' + Date.now();
             alert("Profile picture updated!");
         };
 
