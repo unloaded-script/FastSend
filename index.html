@@ -6,7 +6,6 @@
     <title>FastSend Auth</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
     <style>
-        /* Existing styles + some new ones for the login form */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         #app { width: 100%; max-width: 400px; background: white; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 12px; overflow: hidden; }
         #auth-screen, #setup { padding: 40px 20px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; text-align: center; }
@@ -35,18 +34,22 @@
 
     <div id="setup" style="display:none;">
         <h2 style="margin:0; color:#007bff;">FastSend</h2>
-        <p>Welcome, <span id="displayUser"></span>!</p>
     
-        <div style="display:flex; flex-direction:column; gap:10px;">
-            <input type="text" id="roomInput" placeholder="Enter Room ID">
-            <button onclick="joinRoom()">Connect to Chat</button>
+        <div style="margin: 20px 0; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div onclick="document.getElementById('avatarInput').click()" style="cursor:pointer; position: relative;">
+                <img id="userAvatar" src="https://via.placeholder.com/80" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #007bff;">
+                <div style="position: absolute; bottom: 0; right: 0; background: #007bff; color: white; border-radius: 50%; width: 24px; height: 24px; font-size: 16px; display: flex; align-items: center; justify-content: center;">+</div>
+            </div>
+            <input type="file" id="avatarInput" style="display:none;" accept="image/*" onchange="updateProfilePic(this)">
+            <strong id="displayUser" style="font-size: 18px;"></strong>
         </div>
+
+        <input type="text" id="roomInput" placeholder="Enter Room ID">
+        <button onclick="joinRoom()">Connect to Chat</button>
 
         <div style="margin-top: 20px; text-align: left;">
             <small style="color: #888; font-weight: bold;">RECENT ROOMS</small>
-            <div id="roomList" style="margin-top:10px; max-height: 150px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; background: #fafafa;">
-                <div style="padding: 15px; color: #aaa; text-align: center; font-size: 13px;">No recent rooms</div>
-            </div>
+            <div id="roomList" style="margin-top:10px; max-height: 120px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; background: #fafafa;"></div>
         </div>
     </div>
 
@@ -71,7 +74,6 @@
         let deviceName = '';
         let isRegistering = false;
 
-        // Generate or get a unique Device Fingerprint
         let deviceId = localStorage.getItem('deviceId');
         if (!deviceId) {
             deviceId = 'dev-' + Math.random().toString(36).substr(2, 9);
@@ -94,7 +96,6 @@
             if (!user || !pass) return alert("Fill everything!");
 
             if (isRegistering) {
-                // Check account limit (Max 3 per deviceId)
                 const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('device_id', deviceId);
                 
                 if (count >= 3) return alert("Limit reached! Max 3 accounts per device.");
@@ -104,7 +105,6 @@
                 alert("Account created! Now login.");
                 toggleAuth();
             } else {
-                // Login
                 const { data } = await supabase.from('users').select('*').eq('username', user).eq('password', pass).single();
                 if (!data) return alert("Wrong username or password!");
                 
@@ -119,7 +119,7 @@
     
             if (rooms.length === 0) return;
 
-            listContainer.innerHTML = ''; // Clear "No recent rooms"
+            listContainer.innerHTML = '';
     
             rooms.forEach(room => {
                  const item = document.createElement('div');
@@ -128,7 +128,6 @@
                     <span style="font-weight: 500;">Room: ${room}</span>
                     <span style="color: #007bff; font-size: 12px;">Join →</span>
                 `;
-        // When clicked, it fills the input and joins
                 item.onclick = () => {
                     document.getElementById('roomInput').value = room;
                     window.joinRoom();
@@ -143,6 +142,29 @@
             document.getElementById('displayUser').innerText = deviceName;
             updateRoomList();
         }
+
+        window.updateProfilePic = async function(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const fileName = `avatars/${deviceName}-${Date.now()}.png`;
+            const { data, error } = await supabase.storage.from('files').upload(fileName, file);
+
+            if (error) return alert("Upload failed!");
+
+            const { data: urlData } = supabase.storage.from('files').getPublicUrl(fileName);
+            const photoUrl = urlData.publicUrl;
+
+            const { error: dbError } = await supabase
+                .from('users')
+                .update({ avatar_url: photoUrl })
+                .eq('username', deviceName);
+
+            if (dbError) return alert("Error saving to database");
+
+            document.getElementById('userAvatar').src = photoUrl;
+            alert("Profile picture updated!");
+        };
 
         window.joinRoom = async function() {
             currentRoom = document.getElementById('roomInput').value.trim();
@@ -190,15 +212,37 @@
             const container = document.getElementById('messages');
             const div = document.createElement('div');
             const isMe = msg.sender === deviceName;
-            div.className = `msg ${isMe ? 'sent' : 'received'}`;
+    
+            div.style = `display: flex; flex-direction: ${isMe ? 'row-reverse' : 'row'}; align-items: flex-end; gap: 8px; margin-bottom: 10px;`;
+
             let content = msg.content;
             if (content.startsWith("FILE:")) {
                 const parts = content.split('|');
                 content = `<a href="${parts[1].trim()}" target="_blank" style="color:inherit;">📁 ${parts[0].replace("FILE: ", "")}</a>`;
             }
-            div.innerHTML = `<span class="sender-tag">${msg.sender}</span>${content}`;
+
+            div.innerHTML = `
+                <div style="width: 30px; height: 30px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden;">
+                    <img src="https://via.placeholder.com/30" class="msg-avatar-${msg.sender}" style="width:100%; height:100%; object-fit:cover;">
+                </div>
+                <div class="msg ${isMe ? 'sent' : 'received'}" style="margin: 0;">
+                    <span class="sender-tag">${msg.sender}</span>
+                    ${content}
+                </div>
+            `;
+    
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
+    
+            fetchAvatar(msg.sender);
+        }
+
+        async function fetchAvatar(username) {
+            const { data } = await supabase.from('users').select('avatar_url').eq('username', username).single();
+            if (data && data.avatar_url) {
+                const icons = document.querySelectorAll(`.msg-avatar-${username}`);
+                icons.forEach(img => img.src = data.avatar_url);
+            }
         }
     });
 </script>
