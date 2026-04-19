@@ -24,7 +24,7 @@
     </style>
 </head>
 <body>
-
+    <link rel="icon" href="data:,">
     <div id="fade-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9999; pointer-events:none; opacity:0; transition: opacity 0.5s ease;"></div>
 
     <audio id="bg-music" loop>
@@ -129,7 +129,10 @@
             if (e.target.tagName === 'BUTTON') {
                 clickSfx.currentTime = 0;
                 clickSfx.play();
-                if (bgMusic.paused) bgMusic.play();
+
+                if (bgMusic.src && bgMusic.paused) {
+                    bgMusic.play().catch(err => console.error("Music playback failed:", err));
+                }
             }
         });
 
@@ -206,8 +209,8 @@
                 });
 
             } catch (error) {
-                console.warn("GitHub API error (it might be rate-limited), using local paths instead.");
-                clickSfx.src = 'assets/click.mp3';
+                console.warn("API Error, using fallbacks");
+                clickSfx.src = 'assets/click.mp3'; 
                 bgMusic.src = 'assets/ambient.mp3';
             }
         }
