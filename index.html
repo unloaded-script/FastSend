@@ -37,7 +37,7 @@
     
         <div style="margin: 20px 0; display: flex; flex-direction: column; align-items: center; gap: 10px;">
             <div onclick="document.getElementById('avatarInput').click()" style="cursor:pointer; position: relative;">
-                <img id="userAvatar" src="https://via.placeholder.com/80" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #007bff;">
+                <img id="userAvatar" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #007bff; background: #eee;">
                 <div style="position: absolute; bottom: 0; right: 0; background: #007bff; color: white; border-radius: 50%; width: 24px; height: 24px; font-size: 16px; display: flex; align-items: center; justify-content: center;">+</div>
             </div>
             <input type="file" id="avatarInput" style="display:none;" accept="image/*" onchange="updateProfilePic(this)">
@@ -223,7 +223,7 @@
 
             div.innerHTML = `
                 <div style="width: 30px; height: 30px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden;">
-                    <img src="https://via.placeholder.com/30" class="msg-avatar-${msg.sender}" style="width:100%; height:100%; object-fit:cover;">
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" class="msg-avatar-${msg.sender}" style="width:100%; height:100%; object-fit:cover; background: #ccc;">
                 </div>
                 <div class="msg ${isMe ? 'sent' : 'received'}" style="margin: 0;">
                     <span class="sender-tag">${msg.sender}</span>
