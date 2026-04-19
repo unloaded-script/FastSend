@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FastSend Messenger</title>
+    <title>FastSend Auth</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
-    
     <style>
+        /* Existing styles + some new ones for the login form */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         #app { width: 100%; max-width: 400px; background: white; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 12px; overflow: hidden; }
-        #setup { padding: 40px 20px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; text-align: center; }
+        #auth-screen, #setup { padding: 40px 20px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; text-align: center; }
         #chat-window { display: none; flex-direction: column; height: 100%; }
         #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #e5ddd5; }
         .msg { padding: 8px 12px; border-radius: 15px; max-width: 80%; font-size: 14px; position: relative; word-wrap: break-word; }
@@ -17,20 +17,27 @@
         .sent { background: #dcf8c6; align-self: flex-end; border-bottom-right-radius: 2px; }
         .sender-tag { font-size: 10px; font-weight: bold; color: #888; margin-bottom: 2px; display: block; }
         .input-area { padding: 10px; display: flex; gap: 8px; background: #f0f0f0; }
-        input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 20px; outline: none; font-size: 16px; }
+        input { padding: 12px; border: 1px solid #ccc; border-radius: 20px; outline: none; font-size: 16px; }
         button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #0056b3; }
+        .switch-link { color: #007bff; cursor: pointer; font-size: 13px; text-decoration: underline; }
     </style>
 </head>
 <body>
 
 <div id="app">
-    <div id="setup">
+    <div id="auth-screen">
+        <h2 id="auth-title">Login</h2>
+        <input type="text" id="userInput" placeholder="Username">
+        <input type="password" id="passInput" placeholder="Password">
+        <button id="authBtn" onclick="handleAuth()">Login</button>
+        <p id="toggleMsg">No account? <span class="switch-link" onclick="toggleAuth()">Register</span></p>
+    </div>
+
+    <div id="setup" style="display:none;">
         <h2 style="margin:0; color:#007bff;">FastSend</h2>
-        <p style="color:#666;">Enter a Room ID to sync devices</p>
-        <input type="text" id="roomInput" placeholder="Room ID (e.g. 1234)" autofocus>
-        <input type="text" id="nameInput" placeholder="Device Name (e.g. PC)">
-        <button onclick="joinRoom()">Connect</button>
+        <p>Welcome, <span id="displayUser"></span>!</p>
+        <input type="text" id="roomInput" placeholder="Enter Room ID">
+        <button onclick="joinRoom()">Connect to Chat</button>
     </div>
 
     <div id="chat-window">
@@ -38,7 +45,6 @@
         <div class="input-area">
             <input type="file" id="fileInput" style="display:none;" onchange="uploadFile(this)">
             <button onclick="document.getElementById('fileInput').click()">📎</button>
-    
             <input type="text" id="msgInput" placeholder="Type a message..." onkeypress="handleKey(event)">
             <button onclick="sendMessage()">Send</button>
         </div>
@@ -47,130 +53,113 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- 1. CONFIGURATION ---
         const SB_URL = 'https://mqngtlppbbudjxtlzdtj.supabase.co';
         const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xbmd0bHBwYmJ1ZGp4dGx6ZHRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNDc4NzUsImV4cCI6MjA5MTkyMzg3NX0.eQLwJLl3rmL1hh8gbz2F2k0t1c5IM-mDPeF3MjHhISM';
-        
-        // Initialize Supabase
         const supabase = window.supabase.createClient(SB_URL, SB_KEY);
         
         let currentRoom = '';
         let deviceName = '';
+        let isRegistering = false;
 
-        // --- 2. GLOBAL FUNCTIONS ---
+        // Generate or get a unique Device Fingerprint
+        let deviceId = localStorage.getItem('deviceId');
+        if (!deviceId) {
+            deviceId = 'dev-' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('deviceId', deviceId);
+        }
+
+        window.toggleAuth = function() {
+            isRegistering = !isRegistering;
+            document.getElementById('auth-title').innerText = isRegistering ? 'Register' : 'Login';
+            document.getElementById('authBtn').innerText = isRegistering ? 'Create Account' : 'Login';
+            document.getElementById('toggleMsg').innerHTML = isRegistering ? 
+                'Already have an account? <span class="switch-link" onclick="toggleAuth()">Login</span>' : 
+                'No account? <span class="switch-link" onclick="toggleAuth()">Register</span>';
+        };
+
+        window.handleAuth = async function() {
+            const user = document.getElementById('userInput').value.trim();
+            const pass = document.getElementById('passInput').value.trim();
+
+            if (!user || !pass) return alert("Fill everything!");
+
+            if (isRegistering) {
+                // Check account limit (Max 3 per deviceId)
+                const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('device_id', deviceId);
+                
+                if (count >= 3) return alert("Limit reached! Max 3 accounts per device.");
+
+                const { error } = await supabase.from('users').insert([{ username: user, password: pass, device_id: deviceId }]);
+                if (error) return alert("Username taken!");
+                alert("Account created! Now login.");
+                toggleAuth();
+            } else {
+                // Login
+                const { data } = await supabase.from('users').select('*').eq('username', user).eq('password', pass).single();
+                if (!data) return alert("Wrong username or password!");
+                
+                deviceName = data.username;
+                showSetup();
+            }
+        };
+
+        function showSetup() {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('setup').style.display = 'flex';
+            document.getElementById('displayUser').innerText = deviceName;
+        }
+
         window.joinRoom = async function() {
             currentRoom = document.getElementById('roomInput').value;
-            deviceName = document.getElementById('nameInput').value || 'Device';
+            if (!currentRoom) return alert("Enter a Room ID");
 
-            if (!currentRoom) return alert("Please enter a Room ID");
-
-            localStorage.setItem('lastRoom', currentRoom);
-            localStorage.setItem('lastName', deviceName);
-
-            // UI Swap
             document.getElementById('setup').style.display = 'none';
             document.getElementById('chat-window').style.display = 'flex';
 
-            // Fetch history
-            const { data } = await supabase
-                .from('group_id') // Updated name
-                .select('*')
-                .eq('room_id', currentRoom)
-                .order('created_at', { ascending: true });
-
+            const { data } = await supabase.from('group_id').select('*').eq('room_id', currentRoom).order('created_at', { ascending: true });
             if (data) data.forEach(msg => displayMessage(msg));
 
-            // Realtime setup
-            supabase
-                .channel('chat-room')
-                .on('postgres_changes', 
-                    { event: 'INSERT', schema: 'public', table: 'group_id', filter: `room_id=eq.${currentRoom}` }, 
-                    payload => displayMessage(payload.new)
-                )
-                .subscribe();
+            supabase.channel('chat-room').on('postgres_changes', 
+                { event: 'INSERT', schema: 'public', table: 'group_id', filter: `room_id=eq.${currentRoom}` }, 
+                payload => displayMessage(payload.new)
+            ).subscribe();
         };
 
         window.sendMessage = async function() {
             const input = document.getElementById('msgInput');
             const content = input.value.trim();
             if (!content) return;
-
-            input.value = ''; // Clear input
-
-            const { error } = await supabase.from('group_id').insert([ // Updated name
-                { 
-                    content: content, 
-                    room_id: currentRoom, 
-                     sender: deviceName 
-                }
-            ]);
-            
-            if (error) console.error("Send Error:", error);
+            input.value = '';
+            await supabase.from('group_id').insert([{ content, room_id: currentRoom, sender: deviceName }]);
         };
 
         window.uploadFile = async function(input) {
             const file = input.files[0];
             if (!file) return;
-
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${currentRoom}/${fileName}`;
-
-            const { data, error } = await supabase.storage
-                .from('files')
-                .upload(filePath, file);
-
-            if (error) return alert("Upload failed: " + error.message);
-
-            const { data: urlData } = supabase.storage
-                .from('files')
-                .getPublicUrl(filePath);
-
-            const publicUrl = urlData.publicUrl;
-            await supabase.from('group_id').insert([
-                { 
-                    content: `FILE: ${file.name} | ${publicUrl}`, 
-                    room_id: currentRoom, 
-                    sender: deviceName 
-                }
-            ]);
+            const filePath = `${currentRoom}/${Math.random()}.${file.name.split('.').pop()}`;
+            const { error } = await supabase.storage.from('files').upload(filePath, file);
+            if (error) return alert("Upload failed!");
+            const { data: urlData } = supabase.storage.from('files').getPublicUrl(filePath);
+            await supabase.from('group_id').insert([{ content: `FILE: ${file.name} | ${urlData.publicUrl}`, room_id: currentRoom, sender: deviceName }]);
         };
 
-        window.handleKey = function(e) {
-            if (e.key === 'Enter') window.sendMessage();
-        };
+        window.handleKey = (e) => { if (e.key === 'Enter') window.sendMessage(); };
 
         function displayMessage(msg) {
             const container = document.getElementById('messages');
             const div = document.createElement('div');
             const isMe = msg.sender === deviceName;
             div.className = `msg ${isMe ? 'sent' : 'received'}`;
-
             let content = msg.content;
-
             if (content.startsWith("FILE:")) {
                 const parts = content.split('|');
-                const fileName = parts[0].replace("FILE: ", "");
-                const url = parts[1].trim();
-                content = `<a href="${url}" target="_blank" style="color:inherit;">📁 ${fileName}</a>`;
+                content = `<a href="${parts[1].trim()}" target="_blank" style="color:inherit;">📁 ${parts[0].replace("FILE: ", "")}</a>`;
             }
-
             div.innerHTML = `<span class="sender-tag">${msg.sender}</span>${content}`;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
-
-        const savedRoom = localStorage.getItem('lastRoom');
-        const savedName = localStorage.getItem('lastName');
-
-        if (savedRoom) {
-            document.getElementById('roomInput').value = savedRoom;
-        }
-        if (savedName) {
-            document.getElementById('nameInput').value = savedName;
-        }
     });
 </script>
-
 </body>
 </html>
