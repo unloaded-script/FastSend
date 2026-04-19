@@ -73,15 +73,16 @@
 </div>
 
 <script>
+    const clickSfx = new Audio(); 
+    const bgMusic = new Audio();
     document.addEventListener('DOMContentLoaded', () => {
         const SB_URL = 'https://mqngtlppbbudjxtlzdtj.supabase.co';
         const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xbmd0bHBwYmJ1ZGp4dGx6ZHRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNDc4NzUsImV4cCI6MjA5MTkyMzg3NX0.eQLwJLl3rmL1hh8gbz2F2k0t1c5IM-mDPeF3MjHhISM';
         const supabase = window.supabase.createClient(SB_URL, SB_KEY);
-
-        const clickSfx = new Audio(); 
-        const bgMusic = new Audio();
+        
         bgMusic.loop = true;
         bgMusic.preload = "auto";
+        bgMusic.volume = 0.2;
         
         let currentRoom = '';
         let deviceName = '';
