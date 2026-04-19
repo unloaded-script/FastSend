@@ -81,6 +81,7 @@
         const clickSfx = new Audio(); 
         const bgMusic = new Audio();
         bgMusic.loop = true;
+        bgMusic.preload = "auto";
         
         let currentRoom = '';
         let deviceName = '';
@@ -125,16 +126,16 @@
             }
         };
 
-        document.addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON') {
-                clickSfx.currentTime = 0;
-                clickSfx.play();
-
-                if (bgMusic.src && bgMusic.paused) {
-                    bgMusic.play().catch(err => console.error("Music playback failed:", err));
-                }
+        document.addEventListener('click', () => {
+            clickSfx.currentTime = 0;
+            clickSfx.play();
+    
+            if (bgMusic.paused && bgMusic.src !== "") {
+                bgMusic.play().catch(e => {
+                    console.warn("Music waiting for user gesture or file load...", e);
+                });
             }
-        });
+        }, { once: false });
 
         async function triggerFade() {
             const overlay = document.getElementById('fade-overlay');
@@ -204,7 +205,8 @@
                     }
                     if (file.name === 'ambient.mp3') {
                         bgMusic.src = file.download_url;
-                        bgMusic.volume = 0.2;
+                        bgMusic.load();
+                        console.log("Background music loaded from GitHub!");
                     }
                 });
 
