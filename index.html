@@ -67,7 +67,7 @@
             <input type="file" id="fileInput" style="display:none;" onchange="uploadFile(this)">
             <button onclick="document.getElementById('fileInput').click()">📎</button>
             <input type="text" id="msgInput" placeholder="Type a message..." onkeypress="handleKey(event)">
-            <button onclick="sendMessage()">Send</button>
+            <button onclick="sendMessage()" id="sendBtn">Send</button>
         </div>
     </div>
 </div>
@@ -127,18 +127,21 @@
             }
         };
 
-        document.addEventListener('click', () => {
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('button')) {
+            clickSfx.currentTime = 0;
             clickSfx.play().catch(() => {});
-
-            if (bgMusic.paused && bgMusic.src !== "") {
-                bgMusic.load(); 
-                bgMusic.play().then(() => {
-                    console.log("10-minute track started successfully!");
-                }).catch(e => {
-                    console.warn("Large file still buffering...", e);
-                });
             }
-        }, { once: true });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    clickSfx.currentTime = 0;
+                    clickSfx.play().catch(() => {});
+                }
+            }
+        });
 
         async function triggerFade() {
             const overlay = document.getElementById('fade-overlay');
@@ -289,7 +292,18 @@
             await supabase.from('group_id').insert([{ content: `FILE: ${file.name} | ${urlData.publicUrl}`, room_id: currentRoom, sender: deviceName }]);
         };
 
-        window.handleKey = (e) => { if (e.key === 'Enter') window.sendMessage(); };
+        window.handleKey = (e) => {
+            if (e.key === 'Enter') {
+                clickSfx.currentTime = 0;
+                clickSfx.play().catch(() => {});
+                const sendBtn = document.getElementById('sendBtn'); 
+                if (sendBtn) {
+                    sendBtn.style.transform = 'scale(1.2)';
+                    setTimeout(() => { sendBtn.style.transform = 'scale(1)'; }, 100);
+                }
+                window.sendMessage(); 
+            }
+        };
 
         function displayMessage(msg) {
             const container = document.getElementById('messages');
